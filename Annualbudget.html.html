@@ -1,0 +1,1396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ledgerly — Personal Budget Tracker</title>
+<style>
+  :root{
+    --sidebar: #1F3D2E;
+    --sidebar-soft: #2A4A3A;
+    --sidebar-text: #CFE0D2;
+    --sidebar-text-dim: #8FAE97;
+    --orange: #D9873F;
+    --blue: #5C8FBF;
+    --green: #2F5C43;
+    --tan: #D8CBA8;
+    --paper: #F5F1E7;
+    --card: #FFFFFF;
+    --ink: #232A24;
+    --ink-soft: #6B7268;
+    --border: #E4DECB;
+    --pos: #2F6B45;
+    --neg: #B23B2E;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--paper);color:var(--ink);}
+  .app{display:flex;min-height:100vh;}
+  /* Sidebar */
+  .sidebar{width:230px;flex-shrink:0;background:var(--sidebar);color:var(--sidebar-text);display:flex;flex-direction:column;padding:22px 16px;}
+  .logo-row{display:flex;align-items:center;gap:10px;margin-bottom:28px;padding:0 6px;}
+  .logo-badge{width:34px;height:34px;border-radius:50%;background:var(--orange);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;flex-shrink:0;}
+  .logo-title{font-weight:700;font-size:16px;color:#fff;line-height:1.1;}
+  .logo-sub{font-size:9px;letter-spacing:0.12em;color:var(--sidebar-text-dim);margin-top:2px;}
+  .nav{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:2px;}
+  .nav li{border-radius:8px;}
+  .nav button{all:unset;display:flex;align-items:center;gap:10px;width:100%;padding:9px 12px;border-radius:8px;cursor:pointer;font-size:13.5px;color:var(--sidebar-text);}
+  .nav button:hover{background:var(--sidebar-soft);}
+  .nav li.active button{background:var(--sidebar-soft);color:var(--orange);border-left:3px solid var(--orange);padding-left:9px;font-weight:600;}
+  .nav .badge{margin-left:auto;font-size:9px;background:rgba(255,255,255,0.12);padding:2px 6px;border-radius:10px;color:var(--sidebar-text-dim);}
+  .nav-icon{width:16px;text-align:center;opacity:0.85;}
+  .sidebar-spacer{flex:1;}
+  .ritual-card{background:var(--sidebar-soft);border-radius:10px;padding:14px;margin-bottom:14px;}
+  .ritual-title{font-size:10px;letter-spacing:0.08em;color:var(--orange);font-weight:700;margin-bottom:6px;}
+  .ritual-text{font-size:12px;color:var(--sidebar-text);line-height:1.5;font-style:italic;}
+  .user-row{display:flex;align-items:center;gap:10px;padding:8px 6px;border-top:1px solid rgba(255,255,255,0.08);padding-top:14px;}
+  .user-avatar{width:30px;height:30px;border-radius:50%;background:var(--tan);color:var(--ink);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;}
+  .user-name{font-size:12.5px;color:#fff;font-weight:600;}
+  .user-sub{font-size:10.5px;color:var(--sidebar-text-dim);}
+
+  /* Main */
+  .content{flex:1;padding:26px 34px 60px;max-width:1180px;}
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:26px;font-size:12.5px;color:var(--ink-soft);}
+  .topbar-right{display:flex;align-items:center;gap:14px;}
+  .year-select{font-family:inherit;font-size:12.5px;border:1px solid var(--border);background:var(--card);border-radius:6px;padding:5px 8px;color:var(--ink);}
+  .help-btn{width:22px;height:22px;border-radius:50%;border:1px solid var(--border);background:var(--card);cursor:pointer;font-size:11px;color:var(--ink-soft);}
+
+  .eyebrow{font-size:11px;letter-spacing:0.12em;color:var(--orange);font-weight:700;margin-bottom:8px;}
+  h1.headline{font-family:Georgia,'Times New Roman',serif;font-size:34px;margin:0 0 10px;font-weight:700;}
+  .subtitle{color:var(--ink-soft);font-size:13.5px;line-height:1.6;max-width:640px;margin-bottom:4px;}
+  .year-progress{text-align:right;font-size:11px;color:var(--ink-soft);letter-spacing:0.05em;margin-top:-30px;}
+
+  .cards-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:26px 0 20px;}
+  .stat-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;position:relative;overflow:hidden;}
+  .stat-card::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;}
+  .stat-card.c-orange::before{background:var(--orange);}
+  .stat-card.c-blue::before{background:var(--blue);}
+  .stat-card.c-green::before{background:var(--green);}
+  .stat-card.c-tan::before{background:var(--tan);}
+  .stat-label{font-size:11.5px;color:var(--ink-soft);margin-bottom:8px;}
+  .stat-value{font-family:Georgia,serif;font-size:24px;font-weight:700;}
+  .stat-caption{font-size:11px;color:var(--ink-soft);margin-top:6px;}
+
+  .compare-banner{border-radius:10px;padding:12px 16px;font-size:13px;margin-bottom:26px;}
+  .compare-banner.pos{background:#EAF3EC;color:var(--pos);}
+  .compare-banner.neg{background:#F7E9E6;color:var(--neg);}
+
+  .panel{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px;}
+  .panel-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;}
+  .panel-title{font-family:Georgia,serif;font-size:19px;font-weight:700;margin:0 0 3px;}
+  .panel-sub{font-size:12px;color:var(--ink-soft);}
+  .live-pill{background:var(--orange);color:#fff;font-size:9.5px;letter-spacing:0.06em;font-weight:700;padding:4px 9px;border-radius:20px;height:fit-content;}
+
+  .cat-row{border-top:1px solid var(--border);padding:16px 0;}
+  .cat-row:first-child{border-top:none;padding-top:4px;}
+  .cat-head{display:flex;align-items:center;gap:12px;margin-bottom:10px;}
+  .cat-avatar{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;flex-shrink:0;}
+  .cat-name{font-weight:700;font-size:14px;}
+  .cat-plan-line{font-size:11.5px;color:var(--ink-soft);}
+  .cat-badges{margin-left:auto;display:flex;gap:6px;flex-shrink:0;}
+  .pill{font-size:10px;font-weight:600;padding:4px 9px;border-radius:20px;white-space:nowrap;}
+  .pill.ok{background:#EAF3EC;color:var(--pos);}
+  .pill.over{background:#F7E9E6;color:var(--neg);}
+  .pill.none{background:#F0EEE6;color:var(--ink-soft);}
+  .bar-rows{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+  .bar-block-label{display:flex;justify-content:space-between;font-size:11px;color:var(--ink-soft);margin-bottom:5px;}
+  .bar-track{height:7px;background:#EFEBDD;border-radius:4px;overflow:hidden;}
+  .bar-fill{height:100%;border-radius:4px;}
+  .bar-left{font-size:10.5px;margin-top:4px;}
+
+  .bottom-row{display:grid;grid-template-columns:1.4fr 1fr;gap:18px;}
+  .year-shape{display:flex;align-items:flex-end;gap:8px;height:150px;margin:14px 0 8px;}
+  .month-bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;cursor:pointer;}
+  .month-bar{width:100%;border-radius:6px 6px 3px 3px;background:var(--tan);min-height:6px;transition:background .15s;}
+  .month-bar.selected{background:var(--orange);}
+  .month-label{font-size:10px;color:var(--ink-soft);margin-top:6px;}
+  .month-label.selected{color:var(--orange);font-weight:700;}
+
+  .mini-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;}
+  .mini-stat{background:#FBF9F3;border-radius:8px;padding:10px;}
+  .mini-stat-label{font-size:10px;color:var(--ink-soft);}
+  .mini-stat-value{font-family:Georgia,serif;font-size:18px;font-weight:700;margin-top:3px;}
+  .detail-cat-row{display:flex;justify-content:space-between;padding:8px 0;border-top:1px solid var(--border);font-size:12px;}
+  .detail-cat-row:first-of-type{border-top:none;}
+
+  /* Transactions / Budgets / Categories / Rules pages */
+  .import-box{border:1.5px dashed var(--border);border-radius:10px;padding:22px;text-align:center;background:#FBF9F3;margin-bottom:18px;}
+  .import-box input[type=file]{display:none;}
+  .import-label{display:block;cursor:pointer;}
+  .btn{font-family:inherit;background:var(--ink);color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:12.5px;cursor:pointer;}
+  .btn.secondary{background:transparent;border:1px solid var(--border);color:var(--ink-soft);}
+  .btn.small{padding:5px 10px;font-size:11.5px;}
+  .btn.danger{background:var(--neg);}
+  textarea.paste{width:100%;min-height:100px;font-family:ui-monospace,Menlo,monospace;font-size:12px;border:1px solid var(--border);border-radius:8px;padding:10px;margin:10px 0;}
+  .filters-row{display:flex;gap:10px;margin-bottom:14px;}
+  select, input[type=number], input[type=text]{font-family:inherit;font-size:12.5px;border:1px solid var(--border);border-radius:6px;padding:6px 8px;background:#fff;color:var(--ink);}
+  input[type=color]{width:34px;height:28px;border:1px solid var(--border);border-radius:6px;padding:2px;background:#fff;cursor:pointer;}
+  table{width:100%;border-collapse:collapse;font-size:12.5px;}
+  th{text-align:left;font-size:10.5px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.04em;padding:6px 8px;border-bottom:1px solid var(--border);}
+  td{padding:8px;border-bottom:1px solid var(--border);vertical-align:middle;}
+  .amt-neg{color:var(--neg);}
+  .amt-pos{color:var(--pos);}
+  .status-msg{font-size:12px;color:var(--pos);margin-top:8px;}
+  .budget-table input[type=number]{width:110px;}
+  .swatch{width:10px;height:10px;border-radius:3px;display:inline-block;margin-right:8px;}
+  .tag{display:inline-flex;align-items:center;gap:6px;background:#F0EEE6;border-radius:14px;padding:3px 6px 3px 10px;font-size:11px;margin:2px 4px 2px 0;color:var(--ink-soft);}
+  .tag-x{cursor:pointer;font-weight:700;color:var(--ink-soft);width:15px;height:15px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.06);}
+  .tag-x:hover{background:rgba(178,59,46,0.2);color:var(--neg);}
+  .help-panel{background:#FBF9F3;border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:20px;font-size:12.5px;line-height:1.7;color:var(--ink-soft);}
+  .hidden{display:none;}
+  .inline-form{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px;}
+  .income-radio-label{display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--ink-soft);white-space:nowrap;}
+  .rule-block{border-top:1px solid var(--border);padding:16px 0;}
+  .rule-block:first-child{border-top:none;padding-top:4px;}
+  .rule-head{display:flex;align-items:center;gap:8px;font-weight:700;font-size:13.5px;margin-bottom:10px;}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="logo-row">
+      <div class="logo-badge">$</div>
+      <div>
+        <div class="logo-title">Ledgerly</div>
+        <div class="logo-sub">MONEY, MADE CLEAR</div>
+      </div>
+    </div>
+    <ul class="nav" id="nav-list"></ul>
+    <div class="sidebar-spacer"></div>
+    <div class="ritual-card">
+      <div class="ritual-title">A SMALL RITUAL</div>
+      <div class="ritual-text">Give your spending five calm minutes. You'll see more than numbers.</div>
+    </div>
+    <div class="user-row">
+      <div class="user-avatar">ME</div>
+      <div>
+        <div class="user-name">Your budget</div>
+        <div class="user-sub">Saved on this device</div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="content">
+    <div class="topbar">
+      <div id="breadcrumb">Personal finance / Overview</div>
+      <div class="topbar-right">
+        <select class="year-select" id="year-select" onchange="setYear(this.value)"></select>
+        <button class="help-btn" onclick="toggleHelp()">?</button>
+      </div>
+    </div>
+    <div id="help-panel" class="help-panel hidden"></div>
+    <div id="page-root"></div>
+  </main>
+</div>
+
+<script>
+/* ---------- Default taxonomy (categories, rules, exact overrides) ---------- */
+function defaultCategories(){
+  return [
+    {name:"Groceries", color:"#6B8F71"},
+    {name:"Dining", color:"#C98A3E"},
+    {name:"Transport", color:"#4C6B8A"},
+    {name:"Utilities", color:"#7D6B8A"},
+    {name:"Subscriptions", color:"#A2673E"},
+    {name:"Rent/Mortgage", color:"#8A4C4C"},
+    {name:"Shopping", color:"#B98A4C"},
+    {name:"Health", color:"#4C8A80"},
+    {name:"Entertainment", color:"#8A7A4C"},
+    {name:"Travel", color:"#4C8A6B"},
+    {name:"Giving", color:"#3F6B4A"},
+    {name:"Other", color:"#8A8A7A"},
+    {name:"Income", color:"#5C8FBF"}
+  ];
+}
+function defaultRules(){
+  return {
+    Groceries: ["pak n save","new world","woolworths","countdown","four square","fresh choice","moore wilsons","walmart","kroger","safeway","trader joe","whole foods","aldi","grocery","publix","costco","sprouts"],
+    Dining: ["starbucks","mcdonald","restaurant","cafe","coffee","chipotle","doordash","uber eats","grubhub","pizza","taco","diner","bistro","duck island","carlucci","pizza hutt","kfc"],
+    Transport: ["uber","lyft","shell","chevron","exxon","gas station","parking","transit","metro","bp connect","z energy","caltex","gull","snapper","fuel"],
+    Utilities: ["electric","water bill","gas company","internet","comcast","verizon","at&t","utility","xfinity","power co","spark","vodafone","2degrees"],
+    Subscriptions: ["netflix","spotify","hulu","disney+","subscription","amazon prime","apple.com/bill","icloud","audible","skinny mobil","skinny"],
+    "Rent/Mortgage": ["rent","mortgage","landlord","property mgmt","property management"],
+    Shopping: ["amazon","target","ebay","best buy","shein","clothing","nike","macy","ikea","etsy","kmart","the warehous","bunnings","briscoes","trademe","trade me","paper plus","bed bath","country road","adidas","golf warehou","rebel sport","as colour"],
+    Health: ["pharmacy","cvs","walgreens","doctor","dental","clinic","hospital","insurance","urgent care","trendy barbe"],
+    Entertainment: ["movie","cinema","theater","concert","ticketmaster","steam","playstation","xbox","bowling","o & bowl","tawa squash"],
+    Travel: ["airline","delta","united air","airbnb","hotel","marriott","expedia","southwest","jetstar","air new zeal"],
+    Giving: ["cyc donation","ecclesia","christadelphian","tithe","offering","donation"],
+    Other: [],
+    Income: ["payroll","salary","direct dep","paycheck","employer","studylink","direct credit"]
+  };
+}
+function defaultExactRules(){
+  return [
+    {id:"ex_seed_1", phrase:"pak n save fuel", category:"Transport"}
+  ];
+}
+function setupDefaultTaxonomy(){
+  state.categories = defaultCategories();
+  state.rules = defaultRules();
+  state.exactRules = defaultExactRules();
+  state.incomeCategories = ["Income"];
+  state.fallbackCategory = "Other";
+}
+
+function categorize(desc, amount){
+  var d = (desc||"").toLowerCase();
+  for (var i=0;i<state.exactRules.length;i++){
+    var r = state.exactRules[i];
+    if (r.phrase && d.indexOf(r.phrase.toLowerCase()) !== -1) return r.category;
+  }
+  for (var j=0;j<state.categories.length;j++){
+    var cat = state.categories[j].name;
+    var kws = state.rules[cat] || [];
+    for (var k=0;k<kws.length;k++){ if (d.indexOf(kws[k]) !== -1) return cat; }
+  }
+  if (amount > 0) return state.incomeCategories[0] || state.fallbackCategory;
+  return state.fallbackCategory;
+}
+function colorOf(name){
+  var c = state.categories.find(function(c){ return c.name===name; });
+  return c ? c.color : "#8A8A7A";
+}
+function categoryNames(){ return state.categories.map(function(c){ return c.name; }); }
+function isIncomeCategory(name){ return state.incomeCategories.indexOf(name) !== -1; }
+function expenseCategoryNames(){ return state.categories.filter(function(c){ return !isIncomeCategory(c.name); }).map(function(c){ return c.name; }); }
+
+/* ---------- CSV parsing ---------- */
+function parseCSVLine(line){
+  var result = []; var cur = ""; var inQuotes = false;
+  for (var i=0;i<line.length;i++){
+    var ch = line[i];
+    if (inQuotes){
+      if (ch === '"'){ if (line[i+1] === '"'){ cur += '"'; i++; } else { inQuotes = false; } }
+      else cur += ch;
+    } else {
+      if (ch === '"') inQuotes = true;
+      else if (ch === ','){ result.push(cur); cur = ""; }
+      else cur += ch;
+    }
+  }
+  result.push(cur);
+  return result;
+}
+function parseCSV(text){
+  var lines = text.split(/\r?\n/).filter(function(l){ return l.trim().length>0; });
+  if (lines.length===0) return {headers:[], rows:[]};
+  var headers = parseCSVLine(lines[0]).map(function(h){ return h.trim(); });
+  var rows = lines.slice(1).map(function(line){
+    var vals = parseCSVLine(line);
+    var obj = {};
+    headers.forEach(function(h,i){ obj[h] = vals[i]!==undefined ? vals[i].trim() : ""; });
+    return obj;
+  });
+  return {headers:headers, rows:rows};
+}
+function findCol(headers, matches){
+  var lower = headers.map(function(h){ return h.toLowerCase(); });
+  for (var i=0;i<matches.length;i++){
+    var idx = lower.findIndex(function(h){ return h.indexOf(matches[i])!==-1; });
+    if (idx !== -1) return headers[idx];
+  }
+  return null;
+}
+function parseAmount(raw){
+  if (raw===undefined||raw===null||raw==="") return null;
+  var s = String(raw).trim(); var negative = false;
+  if (/^\(.*\)$/.test(s)){ negative = true; s = s.slice(1,-1); }
+  s = s.replace(/[^0-9.\-]/g,"");
+  if (s===""||s==="-") return null;
+  var n = parseFloat(s);
+  if (isNaN(n)) return null;
+  if (negative) n = -Math.abs(n);
+  return n;
+}
+function toISODate(v){
+  if (!v) return null;
+  var s = String(v).trim();
+  var m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return m[1]+"-"+m[2]+"-"+m[3];
+  var d = new Date(s);
+  if (!isNaN(d.getTime())) return d.toISOString().slice(0,10);
+  return null;
+}
+
+/* ---------- Default embedded data (from your ANZ statements) ---------- */
+var DEFAULT_CSV = `Date,Description,Amount
+2025-12-10,SKINNY MOBIL,-17.00
+2025-12-11,NB + RK FRASER DIRECT CREDIT,758.58
+2025-12-12,SKINNY MOBIL,-5.00
+2025-12-12,Wise nzyc deposit refund,-50.00
+2025-12-15,MCDONALDS TA,-1.50
+2025-12-15,TEMU.COM,-39.05
+2025-12-15,cyc donation,-5.00
+2025-12-16,NZYC COMMITTE Repayment NZYC26 Moe Deposit,48.54
+2025-12-17,TRADEME HH43,-40.00
+2025-12-18,NB + RK FRASER DIRECT CREDIT,856.14
+2025-12-19,Crawley Trust repayment groceries,-12.48
+2025-12-22,WOOLWORTHS N,-11.08
+2025-12-22,cyc donation,-5.00
+2025-12-22,Joseph O'Grady icecream ingredients,-12.65
+2025-12-22,Dani icecream ingredients,-21.94
+2025-12-23,MOORE WILSONS,1.20
+2025-12-23,I.R.D. 090-735-969,34.95
+2025-12-23,PAK N SAVE,-39.38
+2025-12-23,MOORE WILSONS,-24.45
+2025-12-24,NB + RK FRASER DIRECT CREDIT,552.12
+2025-12-24,MRS M A FRANCE AND Mum conditioner repayment,3.20
+2025-12-24,BUNNINGS - 9,-6.88
+2025-12-24,PAK N SAVE,-8.89
+2025-12-24,REBEL PORIRU,-19.49
+2025-12-24,REBEL SPORT,-22.74
+2025-12-29,GOLF WAREHOU,-15.00
+2025-12-29,TEMU.COM,-99.11
+2025-12-29,Pakn Save Ra,-132.21
+2025-12-29,cyc donation,-5.00
+2025-12-30,CSSS Reuben F,-5.00
+2026-01-05,WOOLWORTHS N,-5.20
+2026-01-05,WOOLWORTHS N,-10.14
+2026-01-05,SKINNY MOBIL,-13.00
+2026-01-05,cyc donation,-5.00
+2026-01-05,isaac drink repayment,-2.00
+2026-01-05,summerschool New Years reubenfrance,-5.00
+2026-01-05,summerschool Reuben Photo,-2.00
+2026-01-09,WOOLWORTHS N,-15.43
+2026-01-12,cyc donation,-5.00
+2026-01-14,NEW WORLD TA,-7.58
+2026-01-16,Reuben Timothy Franc BILL PAYMENT,-60.00
+2026-01-16,NZYC COMMITTEE GROUP NZYC2026 Deposit,-250.00
+2026-01-19,WOOLWORTHS N,-9.09
+2026-01-19,TAWA TAKE NO,-13.13
+2026-01-19,cyc donation,-5.00
+2026-01-20,Wise,-50.28
+2026-01-21,POHL E E BILL PAYMENT,175.00
+2026-01-21,NEW WORLD TA,-2.99
+2026-01-21,TRADEME 1RLI,-3.60
+2026-01-21,TRADEME BKL2,-10.00
+2026-01-21,TRADEME 5M6S,-20.00
+2026-01-23,WOOLWORTHS N,-2.40
+2026-01-23,Duck Island,-8.00
+2026-01-26,CRAWLEY J L pizza,8.00
+2026-01-26,CRAWLEY JONAT work done,62.50
+2026-01-26,MRS M A FRANCE AND Mum B'Day groceries repayment,101.99
+2026-01-26,WOOLWORTHS N,-10.02
+2026-01-26,SKINNY MOBIL,-17.00
+2026-01-26,PIZZA HUTT P,-19.48
+2026-01-26,cyc donation,-5.00
+2026-01-27,NEW WORLD TA,-39.36
+2026-01-27,PAK N SAVE,-62.63
+2026-02-02,WOOLWORTHS N,-13.99
+2026-02-02,TAWA TAKE NO,-52.98
+2026-02-02,cyc donation,-5.00
+2026-02-02,NZYC COMMITTEE GROUP Reuben icecream,-12.00
+2026-02-04,NEW WORLD TA,-8.25
+2026-02-04,Trendy Barbe,-30.60
+2026-02-04,das petrol money,-10.00
+2026-02-05,TAWA TAKE NO,-13.13
+2026-02-09,CRAWLEY J L antique side board share,125.00
+2026-02-09,TRADE ME LTD W87794958,660.22
+2026-02-09,TRADEME VI77,-12.00
+2026-02-09,WOOLWORTHS N,-12.86
+2026-02-09,THE BOTTLE-O,-31.99
+2026-02-09,BUNNINGS ONL,-32.72
+2026-02-09,TRADEME KHP5,-49.00
+2026-02-09,TRADEME A6CH,-76.63
+2026-02-09,cyc donation,-5.00
+2026-02-11,Jonathan furniture,-20.00
+2026-02-12,SKINNY MOBIL,-17.00
+2026-02-12,S G Muhary Trademe Furnture,-5.50
+2026-02-16,TAWA SQUASH,-6.00
+2026-02-16,BBB Porirua,-10.00
+2026-02-16,KMART NEW ZE,-42.75
+2026-02-16,BRISCOES POR,-419.97
+2026-02-16,cyc donation,-5.00
+2026-02-17,KMART NEW ZE,-36.00
+2026-02-18,Jonathan Plywood Conf,-113.00
+2026-02-20,NZYC COMMITTE Welcome pack Icecream Reimbursemen,270.70
+2026-02-20,NZYC COMMITTE Packs&Refund Postage&Ply Reimbursemen,346.83
+2026-02-23,WOOLWORTHS N,-5.00
+2026-02-23,cyc donation,-5.00
+2026-02-23,isaac furniture pickup,-30.00
+2026-02-25,SNAPPER SERV,-40.60
+2026-02-25,Adidas New Z,-110.00
+2026-02-26,NZYC COMMITTE Anna Pickard Fees Refund,290.00
+2026-02-26,Mum repayment borrow Cash,-120.00
+2026-02-26,winterschool winterschool fees,-350.00
+2026-02-26,Reuben Timothy Franc Transfer Wise,-230.00
+2026-02-27,NEW WORLD TA,-7.49
+2026-03-02,NZYC COMMITTE Notes book Postage Reimbursemen,6.50
+2026-03-02,NZYC COMMITTE Welcome pack Reimbursemen,152.71
+2026-03-02,STUDYLINK STUDALLOW 29761,43.95
+2026-03-02,Fresh Choice,-3.20
+2026-03-02,WOOLWORTHS N,-8.40
+2026-03-02,THE WAREHOUS,-17.50
+2026-03-02,PAK N SAVE,-63.70
+2026-03-02,WOOLWORTHS N,-89.01
+2026-03-02,cyc donation,-5.00
+2026-03-02,cyc Startup Camp,-40.00
+2026-03-03,Tawa Christadelphian WINE,71.94
+2026-03-03,TAWA TAKE NO,-6.56
+2026-03-05,Jonathan furniture,-112.50
+2026-03-09,NZYC COMMITTE Timber Giant Jenga Reimbursemen,60.00
+2026-03-09,STUDYLINK STUDALLOW 29783,43.95
+2026-03-09,O & Bowl Por,-20.34
+2026-03-09,cyc donation,-5.00
+2026-03-09,John Harrison Reuben,-60.00
+2026-03-12,NZYC COMMITTEE GROUP NZYC2026 T-shirts,-60.00
+2026-03-12,PAK N SAVE FUEL PORI,-103.45
+2026-03-13,MRS M A FRANCE AND Mum petrol+9 buckaroonies,112.45
+2026-03-13,SKINNY MOBIL,-17.00
+2026-03-16,PBKAS3D8480 Porirua Br 2 110552,405.00
+2026-03-16,PBKAS3D8480 Porirua Br 2 110726,73.50
+2026-03-16,STUDYLINK STUDALLOW 29805,43.95
+2026-03-16,Jordan Jeffress,-50.00
+2026-03-16,Zachery Nolan,-50.00
+2026-03-16,Icecream Fundraising,-378.50
+2026-03-16,PAK N SAVE,-0.99
+2026-03-16,PAPER PLUS N,-5.99
+2026-03-16,KMART NEW ZE,-6.00
+2026-03-16,NEW WORLD TA,-6.78
+2026-03-16,BP CONNECT T,-10.00
+2026-03-16,BED BATH AND,-24.00
+2026-03-16,THE WAREHOUS,-36.00
+2026-03-16,cyc donation,-5.00
+2026-03-16,Mum repayment cash,-10.00
+2026-03-16,Jethro Stephenson mystery purchase,-34.00
+2026-03-17,NEW WORLD TA,-2.99
+2026-03-18,AS Colour,-106.34
+2026-03-23,STUDYLINK STUDALLOW 29827,43.95
+2026-03-23,COUNTRY ROAD,-14.90
+2026-03-23,cyc donation,-5.00
+2026-03-23,Tawa ecclesia Secondhand book,-5.00
+2026-03-23,Tawa ecclesia Ecclesial Camp,-120.00
+2026-03-23,Reuben Timothy Franc Wise payment RefundJordan,-290.00
+2026-03-24,BUNNINGS - 9,-4.25
+2026-03-24,THE WAREHOUS,-8.90
+2026-03-24,Trendy Barbe,-30.60
+2026-03-24,NEW WORLD TA,-53.96
+2026-03-24,PAK N SAVE,-135.94
+2026-03-24,Mum repayment cash,-30.00
+2026-03-25,KMART ONLINE,10.00
+2026-03-25,KMART NEW ZE,-2.00
+2026-03-25,KMART ONLINE,-10.00
+2026-03-25,KMART NEW ZE,-29.00
+2026-03-26,NZYC COMMITTE Notesbook shipping Reimbursemen,6.50
+2026-03-26,NZYC COMMITTE Sationary Misc Reimbursemen,42.15
+2026-03-26,NZYC COMMITTE Drinks Reimbursemen,189.90
+2026-03-26,PAK N SAVE,-6.39
+2026-03-26,KMART NEW ZE,-14.00
+2026-03-27,NZYC COMMITTE Jordanphilli FeesRefund Reimbursemen,290.00
+2026-03-30,STUDYLINK STUDALLOW 29849,43.95
+2026-03-30,KMART ONLINE,-14.00
+2026-03-30,cyc donation,-5.00
+2026-04-01,SNAPPER SERV,-15.23
+2026-04-01,CHEQUE/WITHDRAWAL,-100.00
+2026-04-01,Jonathan fuel Transporting Luggage,-180.00
+2026-04-02,STUDYLINK STUDALLOW 29869,57.58
+2026-04-02,BUNNINGS - 9,-12.90
+2026-04-02,KMART NEW ZE,-31.00
+2026-04-07,cyc donation,-5.00
+2026-04-07,Amy Bennett burger,-15.90
+2026-04-09,NZYC COMMITTE Luggage Transport Fuel Refund,180.00
+2026-04-09,NZYC COMMITTE Paint Connect 4 Reimbursemen,12.90
+2026-04-09,NZYC COMMITTE Drinks Float Reimbursemen,100.00
+2026-04-10,SKINNY MOBIL,-17.00
+2026-04-10,NZYC COMMITTEE GROUP Drinks ReubenFrance,-4.00
+2026-04-13,STUDYLINK STUDALLOW 29889,63.03
+2026-04-13,NEW WORLD TA,-14.57
+2026-04-13,NEW WORLD TA,-29.72
+2026-04-13,WOOLWORTHS N,-29.78
+2026-04-13,cyc donation,-5.00
+2026-04-14,Tawa Football Football Game,-10.00
+2026-04-14,Tawa Football Registration Fees ReubenFrance,-320.00
+2026-04-20,STUDYLINK STUDALLOW 29911,63.03
+2026-04-20,Duck Island,-8.00
+2026-04-20,cyc donation,-5.00
+2026-04-24,STUDYLINK STUDALLOW 29933,63.03
+2026-04-28,MR S B SUTCLIFFE AND Happy very belated 21st bday,50.00
+2026-04-28,NEW WORLD TA,-1.69
+2026-04-28,NEW WORLD TH,-2.68
+2026-04-28,CARLUCCI MIN,-15.00
+2026-04-28,BUNNINGS - 9,-20.13
+2026-04-28,O & Bowl Por,-21.36
+2026-04-28,cyc donation,-5.00
+2026-04-29,SKINNY MOBIL,-17.00
+2026-04-30,Pizza Hut Ta,-20.48
+2026-05-01,Reuben Timothy Franc Arianne & Hanae Conf Refund,-580.00
+2026-05-04,NZYC COMMITTE ArianneHanae Fees Refund Reimbursemen,580.00
+2026-05-04,STUDYLINK STUDALLOW 29953,63.03
+2026-05-04,das fuel,-10.00
+2026-05-04,PAK N SAVE,-2.49
+2026-05-04,cyc donation,-5.00
+2026-05-04,Nomes furniture pickup,-45.00
+2026-05-04,Alex Bradfield-Eder Wooden Dresser Marketplace,-250.00
+2026-05-07,NZYC COMMITTE Annabelle M Fees Refund Reimbursemen,250.00
+2026-05-07,Reuben Timothy Franc NZYC2026 Annabelle M Fees Refund,-250.00
+2026-05-11,MRS M A FRANCE AND Mum flights,190.22
+2026-05-11,MRS M A FRANCE AND Mum compost and pizza,30.61
+2026-05-11,Tawa Christadel Studybreakfa Reimbursemen,23.67
+2026-05-11,STUDYLINK STUDALLOW 29975,63.03
+2026-05-11,SNAPPER SERV,-20.30
+2026-05-11,PAK N SAVE,-23.67
+2026-05-11,JETSTAR AIR,-79.71
+2026-05-11,Air New Zealand,-110.51
+2026-05-11,cyc donation,-5.00
+2026-05-11,Mum wine ecclesia,-71.94
+2026-05-12,BUNNINGS - 9,-4.99
+2026-05-18,STUDYLINK STUDALLOW 29997,63.03
+2026-05-18,cyc donation,-5.00
+2026-05-19,Jonathan whine,-7.50
+2026-05-20,PAK N SAVE FUEL PORI,-134.16
+2026-05-21,Christchurch North Camp Fees Reuben F,-140.00
+2026-05-25,STUDYLINK STUDALLOW 30020,63.03
+2026-05-25,cyc donation,-5.00
+2026-05-26,Account transfer,80.01
+2026-05-26,MRS M A FRANCE AND Mum petrol repayment,134.16
+2026-05-26,SMZ*BigairGy,-14.00
+2026-05-28,SKINNY MOBIL,-17.00
+2026-05-29,STUDYLINK STUDALLOW 30042,63.03
+2026-06-02,FRANCE NAOMI fromNomes donut,4.00
+2026-06-02,BP CONNECT T,-16.90
+2026-06-02,TRADEME AFB0,-30.00
+2026-06-02,cyc donation,-5.00
+2026-06-08,STUDYLINK STUDALLOW 30062,63.03
+2026-06-08,cyc donation,-5.00
+`;
+
+/* ---------- State ---------- */
+var STORAGE_KEY = "ledgerly_state_v2";
+var NAV_ITEMS = [
+  {id:"overview", label:"Overview", icon:"&#9638;"},
+  {id:"transactions", label:"Transactions", icon:"&#9636;", badge:"live"},
+  {id:"insights", label:"Insights", icon:"&#128200;"},
+  {id:"budgets", label:"Budgets", icon:"&#9635;"},
+  {id:"categories", label:"Categories", icon:"&#9670;"},
+  {id:"rules", label:"Rules", icon:"&#9889;"}
+];
+var MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+
+var state = {
+  page: "overview",
+  transactions: [],
+  budgets: {},
+  categories: [],
+  rules: {},
+  exactRules: [],
+  incomeCategories: ["Income"],
+  fallbackCategory: "Other",
+  year: null,
+  month: null,
+  txMonthFilter: "all",
+  helpOpen: false,
+  status: ""
+};
+
+function loadState(){
+  setupDefaultTaxonomy();
+  var raw = localStorage.getItem(STORAGE_KEY);
+  if (raw){
+    try {
+      var parsed = JSON.parse(raw);
+      state.transactions = parsed.transactions || [];
+      state.budgets = parsed.budgets || {};
+      if (parsed.categories && parsed.categories.length) state.categories = parsed.categories;
+      if (parsed.rules) state.rules = parsed.rules;
+      if (parsed.exactRules) state.exactRules = parsed.exactRules;
+      if (parsed.incomeCategories && parsed.incomeCategories.length) state.incomeCategories = parsed.incomeCategories;
+      else if (parsed.incomeCategory) state.incomeCategories = [parsed.incomeCategory];
+      if (parsed.fallbackCategory) state.fallbackCategory = parsed.fallbackCategory;
+    } catch(e){ seedDefault(); }
+  } else {
+    seedDefault();
+  }
+  var years = availableYears();
+  var now = new Date();
+  state.year = years.indexOf(now.getFullYear())!==-1 ? now.getFullYear() : (years.length ? years[years.length-1] : now.getFullYear());
+  state.month = latestMonthInYear(state.year) || (now.getMonth()+1);
+}
+function seedDefault(){
+  var parsed = parseCSV(DEFAULT_CSV);
+  state.transactions = parsed.rows.map(function(r,i){
+    var date = toISODate(r["Date"]);
+    var amount = parseAmount(r["Amount"]);
+    var description = r["Description"] || "Transaction";
+    return { id: "seed"+i, date: date, description: description, amount: amount, category: categorize(description, amount) };
+  }).filter(function(t){ return t.date && t.amount!==null; });
+  state.budgets = {};
+}
+function saveState(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({
+    transactions: state.transactions,
+    budgets: state.budgets,
+    categories: state.categories,
+    rules: state.rules,
+    exactRules: state.exactRules,
+    incomeCategories: state.incomeCategories,
+    fallbackCategory: state.fallbackCategory
+  }));
+}
+
+/* ---------- Helpers ---------- */
+function txYear(t){ return parseInt(t.date.slice(0,4),10); }
+function txMonth(t){ return parseInt(t.date.slice(5,7),10); }
+function fmt(n){
+  var sign = n<0 ? "-" : "";
+  return sign + "$" + Math.abs(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+function availableYears(){
+  var set = {};
+  state.transactions.forEach(function(t){ set[txYear(t)] = true; });
+  var arr = Object.keys(set).map(Number).sort(function(a,b){return a-b;});
+  if (arr.length===0) arr.push(new Date().getFullYear());
+  return arr;
+}
+function latestMonthInYear(year){
+  var months = state.transactions.filter(function(t){ return txYear(t)===year; }).map(txMonth);
+  if (months.length===0) return null;
+  return Math.max.apply(null, months);
+}
+function txForYear(year){ return state.transactions.filter(function(t){ return txYear(t)===year; }); }
+function txForYearMonth(year, month){ return txForYear(year).filter(function(t){ return txMonth(t)===month; }); }
+function categoryTotals(txs){
+  var map = {};
+  txs.forEach(function(t){ if (t.amount<0 && !isIncomeCategory(t.category)){ map[t.category] = (map[t.category]||0) + Math.abs(t.amount); } });
+  return map;
+}
+function categoryTotalsAll(txs){
+  var map = {};
+  txs.forEach(function(t){
+    if (isIncomeCategory(t.category)){
+      if (t.amount>0) map[t.category] = (map[t.category]||0) + t.amount;
+    } else if (t.amount<0){
+      map[t.category] = (map[t.category]||0) + Math.abs(t.amount);
+    }
+  });
+  return map;
+}
+function sumIncome(txs){ return txs.filter(function(t){return t.amount>0;}).reduce(function(s,t){return s+t.amount;},0); }
+function sumExpense(txs){ return txs.filter(function(t){return t.amount<0;}).reduce(function(s,t){return s+Math.abs(t.amount);},0); }
+function escapeHtml(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function escapeAttr(s){ return escapeHtml(s).replace(/"/g,"&quot;").replace(/'/g,"&#39;"); }
+
+/* ---------- Rendering: shell ---------- */
+function render(){
+  renderNav();
+  renderYearSelect();
+  renderHelp();
+  document.getElementById("breadcrumb").textContent = "Personal finance / " + NAV_ITEMS.find(function(n){return n.id===state.page;}).label;
+  var root = document.getElementById("page-root");
+  if (state.page==="overview") root.innerHTML = renderOverview();
+  else if (state.page==="transactions") root.innerHTML = renderTransactions();
+  else if (state.page==="insights") root.innerHTML = renderInsights();
+  else if (state.page==="budgets") root.innerHTML = renderBudgets();
+  else if (state.page==="categories") root.innerHTML = renderCategories();
+  else if (state.page==="rules") root.innerHTML = renderRules();
+}
+function renderNav(){
+  var html = NAV_ITEMS.map(function(item){
+    var active = item.id===state.page ? "active" : "";
+    var badge = item.badge ? '<span class="badge">'+item.badge+'</span>' : "";
+    return '<li class="'+active+'"><button onclick="goPage(\''+item.id+'\')"><span class="nav-icon">'+item.icon+'</span>'+item.label+badge+'</button></li>';
+  }).join("");
+  document.getElementById("nav-list").innerHTML = html;
+}
+function renderYearSelect(){
+  var years = availableYears();
+  var sel = document.getElementById("year-select");
+  sel.innerHTML = years.map(function(y){ return '<option value="'+y+'"'+(y===state.year?' selected':'')+'>'+y+'</option>'; }).join("");
+}
+function renderHelp(){
+  var panel = document.getElementById("help-panel");
+  panel.classList.toggle("hidden", !state.helpOpen);
+  panel.innerHTML = "<strong>How this works:</strong> Set an annual budget per category on the Budgets tab. Manage which categories exist, their colors, and which ones count as income on the Categories tab. On the Rules tab, add keywords so future transactions sort themselves automatically, or add an exact phrase to instantly fix any transaction (past or future) containing it. Everything is saved to this browser only — open this file on another device and you'll need to re-import your CSVs and any custom rules there too.";
+}
+function toggleHelp(){ state.helpOpen = !state.helpOpen; render(); }
+function goPage(p){ state.page = p; state.status=""; render(); }
+function setYear(y){ state.year = parseInt(y,10); state.month = latestMonthInYear(state.year) || 1; render(); }
+function selectMonth(m){ state.month = m; render(); }
+
+/* ---------- Overview ---------- */
+function renderOverview(){
+  var yearTxs = txForYear(state.year);
+  var monthTxs = txForYearMonth(state.year, state.month);
+  var spentYear = sumExpense(yearTxs);
+  var incomeYear = sumIncome(yearTxs);
+  var totalAnnualBudget = expenseCategoryNames().reduce(function(s,c){ return s + (Number(state.budgets[c])||0); }, 0);
+  var totalAnnualIncomeTarget = state.categories.filter(function(c){ return isIncomeCategory(c.name); }).reduce(function(s,c){ return s + (Number(state.budgets[c.name])||0); }, 0);
+  var now = new Date();
+  var pctYear;
+  if (state.year < now.getFullYear()) pctYear = 100;
+  else if (state.year > now.getFullYear()) pctYear = 0;
+  else {
+    var startOfYear = new Date(state.year,0,1);
+    pctYear = Math.min(100, Math.max(0, Math.round((now-startOfYear)/(365*86400000)*100)));
+  }
+  var expectedByToday = totalAnnualBudget * (pctYear/100);
+  var projectedYearSpend = pctYear>0 ? spentYear/(pctYear/100) : spentYear;
+  var projectedDiff = totalAnnualBudget - projectedYearSpend;
+  var net = incomeYear - spentYear;
+  var netClass = net>=0 ? "pos" : "neg";
+  var netText = net>=0
+    ? "You've earned "+fmt(incomeYear)+" and spent "+fmt(spentYear)+" so far in "+state.year+" — that leaves you "+fmt(net)+" ahead."
+    : "You've earned "+fmt(incomeYear)+" and spent "+fmt(spentYear)+" so far in "+state.year+" — that's "+fmt(Math.abs(net))+" more spent than earned.";
+
+  var yearCatTotals = categoryTotalsAll(yearTxs);
+  var monthCatTotals = categoryTotalsAll(monthTxs);
+  var relevantCats = categoryNames().filter(function(c){
+    var budget = Number(state.budgets[c])||0;
+    return budget>0 || (yearCatTotals[c]||0)>0;
+  });
+  var incomeCats = relevantCats.filter(isIncomeCategory).sort(function(a,b){ return (yearCatTotals[b]||0) - (yearCatTotals[a]||0); });
+  var expenseCats = relevantCats.filter(function(c){ return !isIncomeCategory(c); }).sort(function(a,b){ return (yearCatTotals[b]||0) - (yearCatTotals[a]||0); });
+
+  function renderCatRow(c, isFirstInGroup){
+    var isIncome = isIncomeCategory(c);
+    var planWord = isIncome ? "target" : "plan";
+    var annualPlan = Number(state.budgets[c])||0;
+    var monthlyPlan = annualPlan/12;
+    var monthActual = monthCatTotals[c]||0;
+    var yearActual = yearCatTotals[c]||0;
+    var monthPct = monthlyPlan>0 ? Math.min(100, monthActual/monthlyPlan*100) : (monthActual>0?100:0);
+    var yearPct = annualPlan>0 ? Math.min(100, yearActual/annualPlan*100) : (yearActual>0?100:0);
+    var surplusMonth = isIncome ? (monthActual - monthlyPlan) : (monthlyPlan - monthActual);
+    var surplusYear = isIncome ? (yearActual - annualPlan) : (annualPlan - yearActual);
+    var monthBad = monthlyPlan>0 && surplusMonth<0;
+    var yearBad = annualPlan>0 && surplusYear<0;
+    var monthPill = monthlyPlan<=0 ? '<span class="pill none">No '+planWord+' set</span>' : (monthBad ? '<span class="pill over">'+(isIncome?"Below target":"Over budget")+'</span>' : '<span class="pill ok">'+(isIncome?"On target":"On plan")+'</span>');
+    var yearPill = annualPlan<=0 ? '<span class="pill none">No '+planWord+' set</span>' : (yearBad ? '<span class="pill over">'+(isIncome?"Below target":"Over budget")+'</span>' : '<span class="pill ok">'+(isIncome?"On target":"On plan")+'</span>');
+    var monthLeftText = surplusMonth<0 ? fmt(Math.abs(surplusMonth))+(isIncome?' short':' over') : fmt(surplusMonth)+(isIncome?' above target':' left');
+    var yearLeftText = surplusYear<0 ? fmt(Math.abs(surplusYear))+(isIncome?' short':' over') : fmt(surplusYear)+(isIncome?' above target':' left');
+    return '' +
+      '<div class="cat-row"'+(isFirstInGroup?' style="border-top:none;padding-top:4px;"':'')+'>' +
+        '<div class="cat-head">' +
+          '<div class="cat-avatar" style="background:'+colorOf(c)+'">'+c.charAt(0)+'</div>' +
+          '<div><div class="cat-name">'+escapeHtml(c)+'</div><div class="cat-plan-line">Monthly '+planWord+': '+fmt(monthlyPlan)+' &middot; Annual '+planWord+': '+fmt(annualPlan)+'</div></div>' +
+          '<div class="cat-badges">'+monthPill+yearPill+'</div>' +
+        '</div>' +
+        '<div class="bar-rows">' +
+          '<div>' +
+            '<div class="bar-block-label"><span>This month actual</span><span>'+fmt(monthActual)+' / '+fmt(monthlyPlan)+'</span></div>' +
+            '<div class="bar-track"><div class="bar-fill" style="width:'+monthPct+'%;background:'+(monthBad?"var(--neg)":"var(--pos)")+'"></div></div>' +
+            '<div class="bar-left" style="color:'+(surplusMonth<0?"var(--neg)":"var(--pos)")+'">'+monthLeftText+' this month</div>' +
+          '</div>' +
+          '<div>' +
+            '<div class="bar-block-label"><span>Year-to-date actual</span><span>'+fmt(yearActual)+' / '+fmt(annualPlan)+'</span></div>' +
+            '<div class="bar-track"><div class="bar-fill" style="width:'+yearPct+'%;background:'+(yearBad?"var(--neg)":"var(--pos)")+'"></div></div>' +
+            '<div class="bar-left" style="color:'+(surplusYear<0?"var(--neg)":"var(--pos)")+'">'+yearLeftText+' this year</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+  }
+
+  var catRowsHtml = "";
+  if (incomeCats.length){
+    catRowsHtml += '<div style="font-size:11px;letter-spacing:0.08em;color:var(--ink-soft);text-transform:uppercase;font-weight:700;margin-bottom:2px;">Income</div>';
+    catRowsHtml += incomeCats.map(function(c,i){ return renderCatRow(c, i===0); }).join("");
+  }
+  if (expenseCats.length){
+    catRowsHtml += '<div style="font-size:11px;letter-spacing:0.08em;color:var(--ink-soft);text-transform:uppercase;font-weight:700;margin:'+(incomeCats.length?'18px':'0')+' 0 2px;">Spending</div>';
+    catRowsHtml += expenseCats.map(function(c,i){ return renderCatRow(c, i===0); }).join("");
+  }
+  if (!incomeCats.length && !expenseCats.length){
+    catRowsHtml = '<div style="color:var(--ink-soft);font-size:12.5px;padding:10px 0;">No categories have a budget or spending yet. Head to the Budgets tab to set annual amounts.</div>';
+  }
+
+  var monthlyTotals = [];
+  for (var m=1;m<=12;m++){ monthlyTotals.push(sumExpense(txForYearMonth(state.year,m))); }
+  var maxMonth = Math.max.apply(null, monthlyTotals.concat([1]));
+  var shapeHtml = monthlyTotals.map(function(v,idx){
+    var m = idx+1;
+    var h = Math.max(4, Math.round(v/maxMonth*130));
+    var sel = m===state.month ? "selected" : "";
+    return '<div class="month-bar-wrap" onclick="selectMonth('+m+')">' +
+      '<div class="month-bar '+sel+'" style="height:'+h+'px"></div>' +
+      '<div class="month-label '+sel+'">'+String(m).padStart(2,"0")+'</div>' +
+    '</div>';
+  }).join("");
+
+  var spentMonth = sumExpense(monthTxs);
+  var incomeMonth = sumIncome(monthTxs);
+  var netMonth = incomeMonth - spentMonth;
+  var detailCats = categoryNames().filter(function(c){ return (Number(state.budgets[c])||0)>0 || (monthCatTotals[c]||0)>0; });
+  var detailRows = detailCats.map(function(c){
+    var isIncome = isIncomeCategory(c);
+    var monthlyPlan = (Number(state.budgets[c])||0)/12;
+    var actual = monthCatTotals[c]||0;
+    var surplus = isIncome ? (actual - monthlyPlan) : (monthlyPlan - actual);
+    var bad = monthlyPlan>0 && surplus<0;
+    return '<div class="detail-cat-row"><span><span class="swatch" style="background:'+colorOf(c)+'"></span>'+escapeHtml(c)+'</span><span style="color:'+(bad?"var(--neg)":"var(--ink)")+'">'+fmt(actual)+' / '+fmt(monthlyPlan)+'</span></div>';
+  }).join("") || '<div style="color:var(--ink-soft);font-size:12px;">No budgeted categories for this month yet.</div>';
+
+  return '' +
+    '<div class="eyebrow">YEAR TO DATE &middot; '+state.year+'</div>' +
+    '<h1 class="headline">Your money, in focus.</h1>' +
+    '<div class="subtitle">A live view of every transaction imported for '+state.year+', checked against the budget you\'ve set for each category.</div>' +
+    '<div class="year-progress">'+state.year+' &middot; '+pctYear+'% through the year</div>' +
+    '<div class="cards-row">' +
+      '<div class="stat-card c-orange"><div class="stat-label">Spent this year</div><div class="stat-value">'+fmt(spentYear)+'</div><div class="stat-caption">'+yearTxs.filter(function(t){return t.amount<0;}).length+' transactions to date</div></div>' +
+      '<div class="stat-card c-blue"><div class="stat-label">Income this year</div><div class="stat-value">'+fmt(incomeYear)+'</div><div class="stat-caption">income recorded to date</div></div>' +
+      '<div class="stat-card c-green"><div class="stat-label">Projected year-end</div><div class="stat-value" style="color:'+(projectedDiff>=0?"var(--pos)":"var(--neg)")+'">'+fmt(Math.abs(projectedDiff))+'</div><div class="stat-caption">'+(projectedDiff>=0?"projected underspend":"projected overspend")+' at this rate</div></div>' +
+      '<div class="stat-card c-tan"><div class="stat-label">Should\'ve spent by now</div><div class="stat-value">'+fmt(expectedByToday)+'</div><div class="stat-caption">based on your annual budget pace</div></div>' +
+    '</div>' +
+    '<div style="font-size:11px;letter-spacing:0.08em;color:var(--ink-soft);text-transform:uppercase;font-weight:700;margin:-10px 0 8px;">Your annual plan</div>' +
+    '<div class="cards-row" style="grid-template-columns:repeat(2,1fr);margin-top:0;">' +
+      '<div class="stat-card c-blue"><div class="stat-label">Total income planned</div><div class="stat-value">'+fmt(totalAnnualIncomeTarget)+'</div><div class="stat-caption">what you\'re aiming to earn all of '+state.year+'</div></div>' +
+      '<div class="stat-card c-orange"><div class="stat-label">Total spending planned</div><div class="stat-value">'+fmt(totalAnnualBudget)+'</div><div class="stat-caption">your combined annual budget for '+state.year+'</div></div>' +
+    '</div>' +
+    '<div class="compare-banner '+netClass+'">'+netText+'</div>' +
+    '<div class="panel">' +
+      '<div class="panel-head"><div><h2 class="panel-title">Where it\'s going</h2><div class="panel-sub">Actuals against monthly and annual category budgets</div></div><div class="live-pill">LIVE PLAN</div></div>' +
+      catRowsHtml +
+    '</div>' +
+    '<div class="bottom-row">' +
+      '<div class="panel">' +
+        '<h2 class="panel-title" style="font-size:17px;">The shape of your year</h2>' +
+        '<div class="panel-sub">Click a month for a detailed breakdown</div>' +
+        '<div class="year-shape">'+shapeHtml+'</div>' +
+      '</div>' +
+      '<div class="panel">' +
+        '<h2 class="panel-title" style="font-size:17px;">'+MONTH_NAMES[state.month-1]+' '+state.year+' detail</h2>' +
+        '<div class="panel-sub">Actuals vs the monthly share of each budget</div>' +
+        '<div class="mini-stats" style="margin-top:14px;">' +
+          '<div class="mini-stat"><div class="mini-stat-label">Spent</div><div class="mini-stat-value">'+fmt(spentMonth)+'</div></div>' +
+          '<div class="mini-stat"><div class="mini-stat-label">Income</div><div class="mini-stat-value">'+fmt(incomeMonth)+'</div></div>' +
+          '<div class="mini-stat"><div class="mini-stat-label" style="color:'+(netMonth>=0?"var(--pos)":"var(--neg)")+'">Net</div><div class="mini-stat-value" style="color:'+(netMonth>=0?"var(--pos)":"var(--neg)")+'">'+fmt(netMonth)+'</div></div>' +
+        '</div>' +
+        detailRows +
+      '</div>' +
+    '</div>';
+}
+
+/* ---------- Transactions ---------- */
+function renderTransactions(){
+  var yearTxs = txForYear(state.year).filter(function(t){
+    return state.txMonthFilter==="all" || txMonth(t)===parseInt(state.txMonthFilter,10);
+  }).sort(function(a,b){ return b.date.localeCompare(a.date); });
+
+  var monthOptions = ['<option value="all">All months</option>'];
+  for (var m=1;m<=12;m++) monthOptions.push('<option value="'+m+'"'+(state.txMonthFilter==String(m)?' selected':'')+'>'+MONTH_NAMES[m-1]+'</option>');
+
+  var names = categoryNames();
+  var rows = yearTxs.map(function(t){
+    var opts = names.map(function(c){ return '<option value="'+escapeAttr(c)+'"'+(t.category===c?' selected':'')+'>'+escapeHtml(c)+'</option>'; }).join("");
+    return '<tr>' +
+      '<td>'+t.date+'</td>' +
+      '<td>'+escapeHtml(t.description)+'</td>' +
+      '<td><select onchange="updateCategory(\''+t.id+'\', this.value)">'+opts+'</select></td>' +
+      '<td class="'+(t.amount<0?"amt-neg":"amt-pos")+'" style="text-align:right;">'+fmt(t.amount)+'</td>' +
+    '</tr>';
+  }).join("");
+
+  return '' +
+    '<div class="eyebrow">TRANSACTIONS</div>' +
+    '<h1 class="headline">Every dollar, accounted for.</h1>' +
+    '<div class="panel" style="background:#FBF9F3;">' +
+      '<div style="font-weight:700;margin-bottom:4px;">Backup &amp; restore</div>' +
+      '<div style="font-size:12px;color:var(--ink-soft);margin-bottom:10px;">Your edits already auto-save to this browser, but that won\'t follow you to another device or survive clearing browser data. Download a backup file now and then, and keep it somewhere safe — it holds everything: transactions, categories, rules and budgets.</div>' +
+      '<button class="btn" onclick="exportBackup()">Download backup (.json)</button> ' +
+      '<label class="btn secondary" style="display:inline-block;cursor:pointer;" for="backup-input">Restore from backup</label>' +
+      '<input id="backup-input" type="file" accept=".json" style="display:none;" onchange="handleBackupFile(event)">' +
+    '</div>' +
+    '<div class="import-box">' +
+      '<label class="import-label" for="file-input">' +
+        '<div style="font-weight:700;margin-bottom:4px;">Import a CSV</div>' +
+        '<div style="font-size:12px;color:var(--ink-soft);">Tap to browse for a file exported from your bank, or paste the text below.</div>' +
+      '</label>' +
+      '<input id="file-input" type="file" accept=".csv" onchange="handleFileInput(event)">' +
+      '<textarea class="paste" id="paste-area" placeholder="Date,Description,Amount&#10;2026-06-01,Employer Payroll,3200"></textarea>' +
+      '<button class="btn" onclick="handlePasteImport()">Add transactions</button> ' +
+      '<button class="btn secondary" onclick="resetToSample()">Reset everything to sample data</button>' +
+      (state.status ? '<div class="status-msg">'+escapeHtml(state.status)+'</div>' : '') +
+    '</div>' +
+    '<div class="filters-row">' +
+      '<select onchange="setTxMonthFilter(this.value)">'+monthOptions.join("")+'</select>' +
+    '</div>' +
+    '<div class="panel">' +
+      '<table><thead><tr><th>Date</th><th>Description</th><th>Category</th><th style="text-align:right;">Amount</th></tr></thead>' +
+      '<tbody>'+(rows || '<tr><td colspan="4" style="color:var(--ink-soft);padding:14px 8px;">No transactions for this filter yet.</td></tr>')+'</tbody></table>' +
+    '</div>';
+}
+function setTxMonthFilter(v){ state.txMonthFilter = v; render(); }
+function exportBackup(){
+  var payload = {
+    ledgerlyBackup: true,
+    exportedAt: new Date().toISOString(),
+    transactions: state.transactions,
+    budgets: state.budgets,
+    categories: state.categories,
+    rules: state.rules,
+    exactRules: state.exactRules,
+    incomeCategories: state.incomeCategories,
+    fallbackCategory: state.fallbackCategory
+  };
+  var blob = new Blob([JSON.stringify(payload, null, 2)], {type:"application/json"});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a");
+  var stamp = new Date().toISOString().slice(0,10);
+  a.href = url;
+  a.download = "ledgerly-backup-"+stamp+".json";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  state.status = "Backup downloaded. Keep that file somewhere safe — it's a full copy of everything.";
+  render();
+}
+function handleBackupFile(e){
+  var file = e.target.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(ev){
+    var parsed;
+    try { parsed = JSON.parse(ev.target.result); }
+    catch(err){ state.status = "That file isn't valid backup JSON."; render(); return; }
+    if (!parsed || !Array.isArray(parsed.transactions)){ state.status = "That doesn't look like a Ledgerly backup file."; render(); return; }
+    state.transactions = parsed.transactions || [];
+    state.budgets = parsed.budgets || {};
+    if (parsed.categories && parsed.categories.length) state.categories = parsed.categories;
+    if (parsed.rules) state.rules = parsed.rules;
+    if (parsed.exactRules) state.exactRules = parsed.exactRules;
+    if (parsed.incomeCategories && parsed.incomeCategories.length) state.incomeCategories = parsed.incomeCategories;
+    else if (parsed.incomeCategory) state.incomeCategories = [parsed.incomeCategory];
+    if (parsed.fallbackCategory) state.fallbackCategory = parsed.fallbackCategory;
+    saveState();
+    var years = availableYears();
+    state.year = years[years.length-1];
+    state.month = latestMonthInYear(state.year) || 1;
+    state.status = "Restored from backup ("+(parsed.exportedAt ? "made "+new Date(parsed.exportedAt).toLocaleDateString() : "date unknown")+").";
+    render();
+  };
+  reader.readAsText(file);
+}
+function updateCategory(id, cat){
+  var t = state.transactions.find(function(t){ return t.id===id; });
+  if (t){ t.category = cat; saveState(); render(); }
+}
+function handleFileInput(e){
+  var file = e.target.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(ev){ importCSVText(ev.target.result); };
+  reader.readAsText(file);
+}
+function handlePasteImport(){
+  var text = document.getElementById("paste-area").value;
+  if (!text.trim()){ state.status = "Paste some CSV text first."; render(); return; }
+  importCSVText(text);
+}
+function importCSVText(text){
+  var parsed = parseCSV(text);
+  var headers = parsed.headers;
+  var dateCol = findCol(headers, ["date"]);
+  var descCol = findCol(headers, ["description","narrative","memo","payee","merchant","name","details","particulars","transaction"]);
+  var amountCol = findCol(headers, ["amount","value","amt"]);
+  var debitCol = findCol(headers, ["debit","withdrawal","money out","paid out"]);
+  var creditCol = findCol(headers, ["credit","deposit","money in","paid in"]);
+  if (!dateCol || (!amountCol && !debitCol && !creditCol)){
+    state.status = "Couldn't find date and amount columns in that data.";
+    render(); return;
+  }
+  var added = 0, skipped = 0;
+  parsed.rows.forEach(function(r){
+    var date = toISODate(r[dateCol]);
+    var description = descCol ? r[descCol] : "Transaction";
+    var amount;
+    if (amountCol) amount = parseAmount(r[amountCol]);
+    else {
+      var debit = parseAmount(r[debitCol]) || 0;
+      var credit = parseAmount(r[creditCol]) || 0;
+      amount = credit - Math.abs(debit);
+    }
+    if (!date || amount===null){ skipped++; return; }
+    var id = date+"|"+description+"|"+amount;
+    if (state.transactions.some(function(t){ return t.id===id; })){ skipped++; return; }
+    state.transactions.push({ id:id, date:date, description:description||"Transaction", amount:amount, category:categorize(description,amount) });
+    added++;
+  });
+  saveState();
+  var years = availableYears();
+  if (years.indexOf(state.year)===-1) state.year = years[years.length-1];
+  state.status = "Added "+added+" transaction"+(added===1?"":"s")+(skipped?(", skipped "+skipped+" duplicate/invalid row"+(skipped===1?"":"s")):"")+".";
+  render();
+}
+function resetToSample(){
+  localStorage.removeItem(STORAGE_KEY);
+  setupDefaultTaxonomy();
+  seedDefault();
+  saveState();
+  var years = availableYears();
+  state.year = years[years.length-1];
+  state.month = latestMonthInYear(state.year) || 1;
+  state.status = "Reset everything — categories, rules and transactions — to the sample dataset.";
+  render();
+}
+
+/* ---------- Insights ---------- */
+function renderInsights(){
+  var yearTxs = txForYear(state.year);
+  var yearCatTotals = categoryTotalsAll(yearTxs);
+  var incomeYear = sumIncome(yearTxs);
+  var spentYear = sumExpense(yearTxs);
+  var savingsRate = incomeYear>0 ? ((incomeYear-spentYear)/incomeYear*100) : 0;
+  var totalAnnualBudget = expenseCategoryNames().reduce(function(s,c){ return s + (Number(state.budgets[c])||0); }, 0);
+  var totalAnnualIncomeTarget = state.categories.filter(function(c){ return isIncomeCategory(c.name); }).reduce(function(s,c){ return s + (Number(state.budgets[c.name])||0); }, 0);
+
+  var monthly = [];
+  for (var m=1;m<=12;m++){
+    var mt = txForYearMonth(state.year, m);
+    var inc = sumIncome(mt), exp = sumExpense(mt);
+    if (inc>0 || exp>0) monthly.push({m:m, income:inc, expense:exp, net:inc-exp});
+  }
+  var deficitMonths = monthly.filter(function(x){ return x.net<0; });
+  var highestMonth = monthly.slice().sort(function(a,b){ return b.expense-a.expense; })[0];
+
+  var overBudgetCats = expenseCategoryNames().map(function(c){
+    var plan = Number(state.budgets[c])||0;
+    var actual = yearCatTotals[c]||0;
+    return {c:c, plan:plan, actual:actual, over:actual-plan};
+  }).filter(function(x){ return x.plan>0 && x.over>0; }).sort(function(a,b){ return b.over-a.over; });
+
+  var noBudgetCats = expenseCategoryNames().map(function(c){
+    return {c:c, actual:yearCatTotals[c]||0};
+  }).filter(function(x){ return (Number(state.budgets[x.c])||0)<=0 && x.actual>0; }).sort(function(a,b){ return b.actual-a.actual; });
+
+  var descTotals = {};
+  yearTxs.forEach(function(t){
+    if (t.amount<0){
+      if (!descTotals[t.description]) descTotals[t.description] = {count:0, total:0};
+      descTotals[t.description].count++;
+      descTotals[t.description].total += Math.abs(t.amount);
+    }
+  });
+  var recurring = Object.keys(descTotals).map(function(d){ return {desc:d, count:descTotals[d].count, total:descTotals[d].total}; })
+    .filter(function(x){ return x.count>=2; })
+    .sort(function(a,b){ return b.total-a.total; })
+    .slice(0,8);
+
+  var biggestTx = yearTxs.filter(function(t){ return t.amount<0; })
+    .sort(function(a,b){ return Math.abs(b.amount)-Math.abs(a.amount); })
+    .slice(0,5);
+
+  var statCardsHtml = '' +
+    '<div style="font-size:11px;letter-spacing:0.08em;color:var(--ink-soft);text-transform:uppercase;font-weight:700;margin-bottom:8px;">Your annual plan</div>' +
+    '<div class="cards-row" style="grid-template-columns:repeat(2,1fr);margin-top:0;">' +
+      '<div class="stat-card c-blue"><div class="stat-label">Total income planned</div><div class="stat-value">'+fmt(totalAnnualIncomeTarget)+'</div><div class="stat-caption">what you\'re aiming to earn all of '+state.year+'</div></div>' +
+      '<div class="stat-card c-orange"><div class="stat-label">Total spending planned</div><div class="stat-value">'+fmt(totalAnnualBudget)+'</div><div class="stat-caption">your combined annual budget for '+state.year+'</div></div>' +
+    '</div>' +
+    '<div class="cards-row" style="grid-template-columns:repeat(4,1fr);">' +
+      '<div class="stat-card c-green"><div class="stat-label">Savings rate</div><div class="stat-value" style="color:'+(savingsRate>=0?"var(--pos)":"var(--neg)")+'">'+savingsRate.toFixed(1)+'%</div><div class="stat-caption">of income kept in '+state.year+'</div></div>' +
+      '<div class="stat-card c-orange"><div class="stat-label">Deficit months</div><div class="stat-value" style="color:'+(deficitMonths.length?"var(--neg)":"var(--pos)")+'">'+deficitMonths.length+'</div><div class="stat-caption">months you spent more than you earned</div></div>' +
+      '<div class="stat-card c-blue"><div class="stat-label">Heaviest month</div><div class="stat-value">'+(highestMonth?MONTH_NAMES[highestMonth.m-1].slice(0,3):"—")+'</div><div class="stat-caption">'+(highestMonth?fmt(highestMonth.expense)+" spent":"no data yet")+'</div></div>' +
+      '<div class="stat-card c-tan"><div class="stat-label">Over budget</div><div class="stat-value" style="color:'+(overBudgetCats.length?"var(--neg)":"var(--pos)")+'">'+overBudgetCats.length+'</div><div class="stat-caption">categories past their annual budget</div></div>' +
+    '</div>';
+
+  var overBudgetHtml = overBudgetCats.length ? overBudgetCats.map(function(x){
+    var pct = Math.round(x.over/x.plan*100);
+    return '<div class="detail-cat-row"><span><span class="swatch" style="background:'+colorOf(x.c)+'"></span>'+escapeHtml(x.c)+'</span><span style="color:var(--neg);">'+fmt(x.over)+' over ('+pct+'% past plan)</span></div>';
+  }).join("") : '<div style="color:var(--ink-soft);font-size:12.5px;">Nothing over budget for '+state.year+' — nice work.</div>';
+
+  var noBudgetHtml = noBudgetCats.length ? noBudgetCats.map(function(x){
+    return '<div class="detail-cat-row"><span><span class="swatch" style="background:'+colorOf(x.c)+'"></span>'+escapeHtml(x.c)+'</span><span>'+fmt(x.actual)+' spent, no budget set</span></div>';
+  }).join("") : '<div style="color:var(--ink-soft);font-size:12.5px;">Every category with spending has a budget. Nice and tidy.</div>';
+
+  var recurringHtml = recurring.length ? recurring.map(function(x){
+    return '<div class="detail-cat-row"><span>'+escapeHtml(x.desc)+' <span style="color:var(--ink-soft);">&times;'+x.count+'</span></span><span>'+fmt(x.total)+'</span></div>';
+  }).join("") : '<div style="color:var(--ink-soft);font-size:12.5px;">No repeated transactions yet.</div>';
+
+  var biggestTxHtml = biggestTx.length ? biggestTx.map(function(t){
+    return '<div class="detail-cat-row"><span>'+t.date+' &middot; '+escapeHtml(t.description)+'</span><span style="color:var(--neg);">'+fmt(t.amount)+'</span></div>';
+  }).join("") : '<div style="color:var(--ink-soft);font-size:12.5px;">No transactions yet.</div>';
+
+  var monthlyRows = monthly.map(function(x){
+    var bad = x.net<0;
+    return '<tr>' +
+      '<td>'+MONTH_NAMES[x.m-1]+'</td>' +
+      '<td style="text-align:right;">'+fmt(x.income)+'</td>' +
+      '<td style="text-align:right;">'+fmt(x.expense)+'</td>' +
+      '<td style="text-align:right;color:'+(bad?"var(--neg)":"var(--pos)")+';">'+fmt(x.net)+'</td>' +
+    '</tr>';
+  }).join("");
+
+  return '' +
+    '<div class="eyebrow">INSIGHTS</div>' +
+    '<h1 class="headline">What your money is doing.</h1>' +
+    '<div class="subtitle">Patterns worth knowing about for '+state.year+' — where budgets are slipping, what keeps recurring, and how each month has actually gone.</div>' +
+    '<div style="margin:22px 0 20px;">'+statCardsHtml+'</div>' +
+    '<div class="bottom-row">' +
+      '<div class="panel">' +
+        '<div class="panel-title" style="font-size:16px;">Over budget this year</div>' +
+        '<div class="panel-sub" style="margin-bottom:6px;">Ranked by how far past plan.</div>' +
+        overBudgetHtml +
+      '</div>' +
+      '<div class="panel">' +
+        '<div class="panel-title" style="font-size:16px;">Spending with no budget</div>' +
+        '<div class="panel-sub" style="margin-bottom:6px;">Real money going somewhere you haven\'t planned for.</div>' +
+        noBudgetHtml +
+      '</div>' +
+    '</div>' +
+    '<div class="bottom-row">' +
+      '<div class="panel">' +
+        '<div class="panel-title" style="font-size:16px;">Recurring charges</div>' +
+        '<div class="panel-sub" style="margin-bottom:6px;">Same description, 2 or more times — subscriptions and habits hide here.</div>' +
+        recurringHtml +
+      '</div>' +
+      '<div class="panel">' +
+        '<div class="panel-title" style="font-size:16px;">Biggest single transactions</div>' +
+        '<div class="panel-sub" style="margin-bottom:6px;">The one-off charges that moved the needle most.</div>' +
+        biggestTxHtml +
+      '</div>' +
+    '</div>' +
+    '<div class="panel">' +
+      '<div class="panel-title" style="font-size:16px;">Month by month</div>' +
+      '<div class="panel-sub" style="margin-bottom:10px;">Income vs. expenses for every month with activity in '+state.year+'.</div>' +
+      '<table><thead><tr><th>Month</th><th style="text-align:right;">Income</th><th style="text-align:right;">Expenses</th><th style="text-align:right;">Net</th></tr></thead>' +
+      '<tbody>'+(monthlyRows || '<tr><td colspan="4" style="color:var(--ink-soft);">No data yet.</td></tr>')+'</tbody></table>' +
+    '</div>';
+}
+
+/* ---------- Budgets ---------- */
+function renderBudgets(){
+  var yearTxs = txForYear(state.year);
+  var yearCatTotals = categoryTotalsAll(yearTxs);
+  function rowsFor(names, isIncome){
+    return names.map(function(c){
+      var val = state.budgets[c]!==undefined ? state.budgets[c] : "";
+      var monthly = val ? (Number(val)/12) : 0;
+      var actual = yearCatTotals[c]||0;
+      var actualLabel = isIncome ? "earned" : "spent";
+      return '<tr>' +
+        '<td><span class="swatch" style="background:'+colorOf(c)+'"></span>'+escapeHtml(c)+'</td>' +
+        '<td><input type="number" min="0" step="10" value="'+val+'" onchange="setBudget(\''+escapeAttr(c)+'\', this.value)"></td>' +
+        '<td>'+fmt(monthly)+' / month</td>' +
+        '<td style="color:var(--ink-soft);">'+fmt(actual)+' '+actualLabel+' so far in '+state.year+'</td>' +
+      '</tr>';
+    }).join("");
+  }
+  var incomeRows = rowsFor(state.categories.filter(function(c){return isIncomeCategory(c.name);}).map(function(c){return c.name;}), true);
+  var expenseRows = rowsFor(expenseCategoryNames(), false);
+  return '' +
+    '<div class="eyebrow">BUDGETS</div>' +
+    '<h1 class="headline">Set your annual plan.</h1>' +
+    '<div class="subtitle">Enter what you expect for the whole year — the monthly figure divides that evenly across 12 months. Add or remove categories on the Categories tab.</div>' +
+    '<div class="panel budget-table" style="margin-top:20px;">' +
+      '<div class="panel-title" style="font-size:16px;">Income targets</div>' +
+      '<div class="panel-sub" style="margin-bottom:10px;">What you expect to earn — the dashboard flags a category red if you fall short.</div>' +
+      '<table><thead><tr><th>Category</th><th>Annual target</th><th>Monthly equivalent</th><th>Actual so far</th></tr></thead>' +
+      '<tbody>'+(incomeRows || '<tr><td colspan="4" style="color:var(--ink-soft);">No income categories yet.</td></tr>')+'</tbody></table>' +
+    '</div>' +
+    '<div class="panel budget-table">' +
+      '<div class="panel-title" style="font-size:16px;">Expense budgets</div>' +
+      '<div class="panel-sub" style="margin-bottom:10px;">What you plan to spend — the dashboard flags a category red if you go over.</div>' +
+      '<table><thead><tr><th>Category</th><th>Annual budget</th><th>Monthly equivalent</th><th>Actual so far</th></tr></thead>' +
+      '<tbody>'+(expenseRows || '<tr><td colspan="4" style="color:var(--ink-soft);">No categories yet.</td></tr>')+'</tbody></table>' +
+    '</div>';
+}
+function setBudget(cat, val){
+  state.budgets[cat] = val==="" ? "" : Number(val);
+  saveState();
+  render();
+}
+
+/* ---------- Categories (add / rename / recolor / delete / set income) ---------- */
+function renderCategories(){
+  var yearTxs = txForYear(state.year);
+  var totals = categoryTotals(yearTxs);
+  var totalSpend = Object.values(totals).reduce(function(s,v){return s+v;},0) || 1;
+  var incomeCatTotals = {};
+  yearTxs.forEach(function(t){ if (t.amount>0 && isIncomeCategory(t.category)){ incomeCatTotals[t.category] = (incomeCatTotals[t.category]||0) + t.amount; } });
+  var totalIncome = Object.values(incomeCatTotals).reduce(function(s,v){return s+v;},0) || 1;
+  var rows = state.categories.map(function(cat){
+    var c = cat.name;
+    var isIncome = isIncomeCategory(c);
+    var val = isIncome ? (incomeCatTotals[c]||0) : (totals[c]||0);
+    var pct = isIncome ? Math.round(val/totalIncome*100)+"% of income" : Math.round(val/totalSpend*100)+"% of spending";
+    var onlyIncomeCat = isIncome && state.incomeCategories.length===1;
+    return '<tr>' +
+      '<td><input type="color" value="'+cat.color+'" onchange="setCategoryColor(\''+escapeAttr(c)+'\', this.value)"></td>' +
+      '<td><input type="text" value="'+escapeAttr(c)+'" style="width:150px;" onchange="renameCategory(\''+escapeAttr(c)+'\', this.value)"></td>' +
+      '<td><label class="income-radio-label"><input type="checkbox" '+(isIncome?'checked':'')+' onchange="toggleIncomeCategory(\''+escapeAttr(c)+'\', this.checked)"> income category</label></td>' +
+      '<td style="text-align:right;">'+fmt(val)+'</td>' +
+      '<td style="color:var(--ink-soft);">'+pct+'</td>' +
+      '<td>'+(onlyIncomeCat ? '<span style="color:var(--ink-soft);font-size:11px;">can\'t delete</span>' : '<button class="btn small danger" onclick="deleteCategory(\''+escapeAttr(c)+'\')">Delete</button>')+'</td>' +
+    '</tr>';
+  }).join("");
+  return '' +
+    '<div class="eyebrow">CATEGORIES</div>' +
+    '<h1 class="headline">'+state.year+' at a glance.</h1>' +
+    '<div class="subtitle">Rename, recolor or remove any category. Deleting one moves its transactions to '+escapeHtml(state.fallbackCategory)+'. Tick as many categories as you like as income — each is excluded from spending totals and shown as a share of income instead, but at least one must stay ticked. Set budgets or income targets for any category on the Budgets tab.</div>' +
+    '<div class="panel" style="margin-top:20px;">' +
+      '<table><thead><tr><th>Color</th><th>Name</th><th></th><th style="text-align:right;">Total ('+state.year+')</th><th>Share</th><th></th></tr></thead>' +
+      '<tbody>'+rows+'</tbody></table>' +
+      '<div class="inline-form">' +
+        '<input type="color" id="new-cat-color" value="#8A8A7A">' +
+        '<input type="text" id="new-cat-name" placeholder="New category name">' +
+        '<button class="btn small" onclick="addCategoryFromForm()">Add category</button>' +
+      '</div>' +
+    '</div>';
+}
+function addCategoryFromForm(){
+  var name = document.getElementById("new-cat-name").value.trim();
+  var color = document.getElementById("new-cat-color").value;
+  addCategory(name, color);
+}
+function addCategory(name, color){
+  if (!name){ state.status = "Give the new category a name first."; render(); return; }
+  var exists = state.categories.some(function(c){ return c.name.toLowerCase()===name.toLowerCase(); });
+  if (exists){ state.status = "A category called \""+name+"\" already exists."; render(); return; }
+  var firstIncomeIdx = state.categories.findIndex(function(c){ return isIncomeCategory(c.name); });
+  var entry = {name:name, color:color||"#8A8A7A"};
+  if (firstIncomeIdx===-1) state.categories.push(entry);
+  else state.categories.splice(firstIncomeIdx, 0, entry);
+  state.rules[name] = [];
+  saveState();
+  render();
+}
+function setCategoryColor(name, color){
+  var c = state.categories.find(function(c){ return c.name===name; });
+  if (c){ c.color = color; saveState(); render(); }
+}
+function renameCategory(oldName, newName){
+  newName = newName.trim();
+  if (!newName || newName===oldName){ render(); return; }
+  var clash = state.categories.some(function(c){ return c.name!==oldName && c.name.toLowerCase()===newName.toLowerCase(); });
+  if (clash){ state.status = "A category called \""+newName+"\" already exists."; render(); return; }
+  state.categories.forEach(function(c){ if (c.name===oldName) c.name = newName; });
+  if (state.rules[oldName] !== undefined){ state.rules[newName] = state.rules[oldName]; delete state.rules[oldName]; }
+  if (state.budgets[oldName] !== undefined){ state.budgets[newName] = state.budgets[oldName]; delete state.budgets[oldName]; }
+  state.transactions.forEach(function(t){ if (t.category===oldName) t.category = newName; });
+  state.exactRules.forEach(function(r){ if (r.category===oldName) r.category = newName; });
+  var incIdx = state.incomeCategories.indexOf(oldName);
+  if (incIdx!==-1) state.incomeCategories[incIdx] = newName;
+  if (state.fallbackCategory===oldName) state.fallbackCategory = newName;
+  saveState();
+  render();
+}
+function toggleIncomeCategory(name, checked){
+  if (checked){
+    if (state.incomeCategories.indexOf(name)===-1) state.incomeCategories.push(name);
+  } else {
+    if (state.incomeCategories.length===1 && state.incomeCategories[0]===name){
+      state.status = "You need at least one income category — tick another before unticking this one.";
+      render();
+      return;
+    }
+    state.incomeCategories = state.incomeCategories.filter(function(n){ return n!==name; });
+  }
+  saveState();
+  render();
+}
+function deleteCategory(name){
+  if (isIncomeCategory(name) && state.incomeCategories.length===1){ state.status = "Tick a different category as income before deleting this one."; render(); return; }
+  var remaining = state.categories.filter(function(c){ return c.name!==name; });
+  if (remaining.length===0){ state.status = "You need at least one category."; render(); return; }
+  var replacement = state.fallbackCategory;
+  if (name===state.fallbackCategory){
+    var fallbackObj = remaining.find(function(c){ return !isIncomeCategory(c.name); }) || remaining[0];
+    replacement = fallbackObj.name;
+    state.fallbackCategory = replacement;
+  }
+  state.transactions.forEach(function(t){ if (t.category===name) t.category = replacement; });
+  state.exactRules.forEach(function(r){ if (r.category===name) r.category = replacement; });
+  state.incomeCategories = state.incomeCategories.filter(function(n){ return n!==name; });
+  delete state.rules[name];
+  delete state.budgets[name];
+  state.categories = remaining;
+  state.status = "Deleted \""+name+"\" — its transactions moved to \""+replacement+"\".";
+  saveState();
+  render();
+}
+
+/* ---------- Rules (keywords + exact phrase overrides) ---------- */
+function renderRules(){
+  var exactRows = state.exactRules.map(function(r){
+    return '<tr>' +
+      '<td>'+escapeHtml(r.phrase)+'</td>' +
+      '<td><span class="swatch" style="background:'+colorOf(r.category)+'"></span>'+escapeHtml(r.category)+'</td>' +
+      '<td><button class="btn small danger" onclick="removeExactRule(\''+r.id+'\')">Remove</button></td>' +
+    '</tr>';
+  }).join("");
+  var catOptions = categoryNames().map(function(c){ return '<option value="'+escapeAttr(c)+'">'+escapeHtml(c)+'</option>'; }).join("");
+
+  var keywordBlocks = state.categories.map(function(cat){
+    var c = cat.name;
+    var kws = state.rules[c] || [];
+    var tags = kws.map(function(k){
+      return '<span class="tag">'+escapeHtml(k)+'<span class="tag-x" onclick="removeKeyword(\''+escapeAttr(c)+'\',\''+escapeAttr(k)+'\')">&times;</span></span>';
+    }).join("") || '<span style="color:var(--ink-soft);font-size:12px;">no keywords yet</span>';
+    return '<div class="rule-block">' +
+      '<div class="rule-head"><span class="swatch" style="background:'+cat.color+'"></span>'+escapeHtml(c)+'</div>' +
+      '<div>'+tags+'</div>' +
+      '<div class="inline-form">' +
+        '<input type="text" id="kw-input-'+escapeAttr(c)+'" placeholder="add a keyword (e.g. costco)" style="width:220px;">' +
+        '<button class="btn small" onclick="addKeywordFromForm(\''+escapeAttr(c)+'\')">Add</button>' +
+      '</div>' +
+    '</div>';
+  }).join("");
+
+  return '' +
+    '<div class="eyebrow">RULES</div>' +
+    '<h1 class="headline">How auto-categorizing works.</h1>' +
+    '<div class="subtitle">Exact phrases are checked first and always win. After that, each transaction is checked against every category\'s keywords until one matches. A leftover positive amount becomes '+escapeHtml(state.incomeCategories[0]||"Income")+'; a leftover negative amount becomes '+escapeHtml(state.fallbackCategory)+'.</div>' +
+    '<div class="panel" style="margin-top:20px;">' +
+      '<div class="panel-title" style="font-size:16px;">Exact phrase overrides</div>' +
+      '<div class="panel-sub" style="margin-bottom:12px;">Add the exact wording from a transaction and it will be re-categorized immediately — including transactions already imported.</div>' +
+      '<table><thead><tr><th>Phrase</th><th>Category</th><th></th></tr></thead>' +
+      '<tbody>'+(exactRows || '<tr><td colspan="3" style="color:var(--ink-soft);">No exact overrides yet.</td></tr>')+'</tbody></table>' +
+      '<div class="inline-form">' +
+        '<input type="text" id="exact-phrase-input" placeholder="e.g. PAK N SAVE FUEL" style="width:220px;">' +
+        '<select id="exact-category-select">'+catOptions+'</select>' +
+        '<button class="btn small" onclick="addExactRuleFromForm()">Add override</button>' +
+      '</div>' +
+      (state.status ? '<div class="status-msg">'+escapeHtml(state.status)+'</div>' : '') +
+    '</div>' +
+    '<div class="panel">' +
+      '<div class="panel-title" style="font-size:16px;margin-bottom:4px;">Keyword rules</div>' +
+      '<div class="panel-sub" style="margin-bottom:6px;">These apply to future imports (and can be re-applied by re-importing a CSV).</div>' +
+      keywordBlocks +
+    '</div>';
+}
+function addKeywordFromForm(cat){
+  var input = document.getElementById("kw-input-"+cat);
+  addKeyword(cat, input.value);
+  input.value = "";
+}
+function addKeyword(cat, keyword){
+  keyword = (keyword||"").trim().toLowerCase();
+  if (!keyword) return;
+  state.rules[cat] = state.rules[cat] || [];
+  if (state.rules[cat].indexOf(keyword)===-1) state.rules[cat].push(keyword);
+  saveState();
+  render();
+}
+function removeKeyword(cat, keyword){
+  state.rules[cat] = (state.rules[cat]||[]).filter(function(k){ return k!==keyword; });
+  saveState();
+  render();
+}
+function addExactRuleFromForm(){
+  var phrase = document.getElementById("exact-phrase-input").value;
+  var category = document.getElementById("exact-category-select").value;
+  addExactRule(phrase, category);
+}
+function addExactRule(phrase, category){
+  phrase = (phrase||"").trim();
+  if (!phrase){ state.status = "Type the phrase to match first."; render(); return; }
+  var id = "ex_"+Date.now()+"_"+Math.floor(Math.random()*10000);
+  state.exactRules.push({id:id, phrase:phrase, category:category});
+  var lower = phrase.toLowerCase();
+  var applied = 0;
+  state.transactions.forEach(function(t){
+    if (t.description.toLowerCase().indexOf(lower)!==-1){ t.category = category; applied++; }
+  });
+  state.status = "Added the override and re-categorized "+applied+" existing transaction"+(applied===1?"":"s")+" to "+category+".";
+  saveState();
+  render();
+}
+function removeExactRule(id){
+  state.exactRules = state.exactRules.filter(function(r){ return r.id!==id; });
+  saveState();
+  render();
+}
+
+/* ---------- Init ---------- */
+loadState();
+render();
+</script>
+</body>
+</html>
