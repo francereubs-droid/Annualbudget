@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ledgerly — Personal Budget Tracker</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1F3D2E">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Ledgerly">
 <style>
   :root{
     --sidebar: #1F3D2E;
@@ -1391,6 +1398,11 @@ function removeExactRule(id){
 /* ---------- Init ---------- */
 loadState();
 render();
+if ("serviceWorker" in navigator){
+  window.addEventListener("load", function(){
+    navigator.serviceWorker.register("sw.js").catch(function(){ /* offline support just won't be available */ });
+  });
+}
 </script>
 </body>
 </html>
